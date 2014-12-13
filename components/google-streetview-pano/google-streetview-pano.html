@@ -1,0 +1,181 @@
+<link rel="import" href="../polymer/polymer.html">
+<link rel="import" href="../google-apis/google-apis.html">
+
+<!--
+Element for generating a Google Maps Street View Panorama.
+
+##### Example
+
+    <google-streetview-pano
+      panoid="CWskcsTEZBNXaD8gG-zATA"
+      heading="330"
+      pitch="-2"
+      zoom="0.8"
+      disableDefaultUI>
+    </google-streetview-pano>
+
+There are tons of great panoramas on the [Google Maps | Views page](https://www.google.com/maps/views/home?gl=us)
+
+To grab a panorama, look at its url in the address bar. For example:
+
+google.com/maps/views/view/102684927602131521305/photo/**1szTnskrdKIAAAGuu3fZRw**
+
+The hash in bold is the `panoid`. You'll often need to dial in the `heading`, `pitch` and `zoom` manually.
+
+@element google-streetview-pano
+@blurb Element for generating a Google Maps Street View Panorama
+@status alpha
+@url http://googlewebcomponents.github.io/google-streetview-pano
+-->
+<polymer-element name="google-streetview-pano" attributes="apiKey version panoid heading pitch zoom disableDefaultUI">
+  <template>
+    <style>
+    :host {
+      display: block;
+    }
+    #pano {
+      height: 100%;
+    }
+    </style>
+    <google-maps-api apiKey="{{apiKey}}" version="{{version}}" on-api-load="{{mapApiLoaded}}"></google-maps-api>
+    <div id="pano" on-mouseenter="{{stop}}" on-mouseleave="{{update}}"></div>
+  </template>
+  <script>
+  Polymer({
+    /**
+     * A Maps API key. To obtain an API key, see developers.google.com/maps/documentation/javascript/tutorial#api_key.
+     *
+     * @property apiKey
+     * @type string
+     * @default null
+     */
+    apiKey: null,
+
+    /**
+     * Version of the Google Maps API to use.
+     *
+     * @attribute version
+     * @type string
+     * @default 3.exp
+     */
+    version: '3.exp',
+
+    /**
+     * Specifies which photosphere to load
+     *
+     * **Required**
+     *
+     * @attribute panoid
+     * @type string
+     * @default null
+     */
+    panoid: null,
+
+    /**
+     * The camera heading in degrees relative to true north. True north is 0°, east is 90°, south is 180°, west is 270°.
+     *
+     * @attribute heading
+     * @type number
+     * @default 45
+     */
+    heading: 45,
+
+    /**
+     * The camera pitch in degrees, relative to the street view vehicle. Ranges from 90° (directly upwards) to -90° (directly downwards).
+     *
+     * @attribute pitch
+     * @type number
+     * @default -2
+     */
+    pitch: -2,
+
+    /**
+     * Sets the zoom level of the panorama. Fully zoomed-out is level 0, where the field of view is 180 degrees.
+     *
+     * @attribute zoom
+     * @type number
+     * @default 1
+     */
+    zoom: 1,
+
+    /**
+     * Enables/disables all default UI.
+     *
+     * @attribute disableDefaultUI
+     * @type boolean
+     * @default false
+     */
+    disableDefaultUI: false,
+    pano: null,
+    rAFid: null,
+    mapApiLoaded: function() {
+      this.pano = new google.maps.StreetViewPanorama(
+          this.$.pano,
+          this.getPanoOptions());
+      this.pano.setVisible(true);
+
+      // Kickoff the rotating animation
+      this.rAFid = requestAnimationFrame(this.update.bind(this));
+    },
+
+    /**
+     * Returns the an object with the current panorama configurations. Useful for
+     * overriding in a subclass.
+     *
+     * @method getPanoOptions
+     * @return {object} Current panorama configuration.
+     */
+    getPanoOptions: function() {
+      var panoOptions = {
+        pano: this.panoid,
+        pov: {
+          heading: this.heading,
+          pitch: this.pitch
+        },
+        disableDefaultUI: this.disableDefaultUI,
+        zoom: this.zoom
+      };
+
+      return panoOptions;
+    },
+
+    /**
+     * Fired every rAF. Updates the heading to create a slow pan effect
+     * Will be canceled by mouse enter or calling stop()
+     * @method update
+     */
+    update: function() {
+      this.rAFid = requestAnimationFrame(this.update.bind(this));
+      var pov = this.pano.getPov();
+      pov.heading += 0.03;
+      this.pano.setPov(pov);
+    },
+
+    /**
+     * Reset the pov for the panorama.
+     * @method reset
+     */
+    reset: function() {
+      var pov = this.pano.getPov();
+      pov.heading = this.heading;
+      pov.pitch = this.pitch;
+      this.pano.setPov(pov);
+    },
+
+    /**
+     * Cancel the slow panning animation.
+     * @method stop
+     */
+    stop: function() {
+      cancelAnimationFrame(this.rAFid);
+    },
+
+    panoidChanged: function(oldVal, newVal) {
+      if (this.pano) {
+        this.pano.setPano(newVal);
+        this.reset();
+      }
+    }
+  });
+  </script>
+</polymer-element>
